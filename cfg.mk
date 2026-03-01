@@ -920,12 +920,14 @@ update-copyright-env = \
 # List syntax-check exemptions.
 exclude_file_name_regexp--sc_space_tab = \
   ^(tests/pr/|tests/nl/nl\.sh$$|gl/.*\.diff$$|man/help2man$$)
+_x_bindtd := gl/.*|lib/euidaccess-stat|src/make-prime-list
+_x_bindtd := $(_x_bindtd)|src/make-buz-table|src/cksum_crc
 exclude_file_name_regexp--sc_bindtextdomain = \
-  ^(gl/.*|lib/euidaccess-stat|src/make-prime-list|src/cksum_crc)\.c$$
+  ^($(_x_bindtd))\.c$$
 exclude_file_name_regexp--sc_trailing_blank = \
   ^(tests/pr/|gl/.*\.diff$$|man/help2man)
 _x_system_h := (system|copy|chown-core|find-mount-point)\.h
-_x_system_c := (libstdbuf|make-prime-list)\.c
+_x_system_c := (libstdbuf|make-prime-list|make-buz-table)\.c
 exclude_file_name_regexp--sc_system_h_headers = \
   ^src/($(_x_system_h)|$(_x_system_c))$$
 
