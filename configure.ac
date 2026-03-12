@@ -284,6 +284,82 @@ if test $gl_gcc_warnings != no; then
   AC_SUBST([GNULIB_TEST_WARN_CFLAGS])
 fi
 
+# split_cdc.c demands Intel Jcc erratum fixes on x86_64 as it _might(!)_
+# get 40% performance penalty otherwise... depending on final code layout!
+# The loops are very tight there and degradation from DSB to MITE instruction
+# decoder feels very real on Skylake. One can benchmark the issue on Linux
+# with perf(1), however the issue likely affects other OSes on x86_64 CPUs:
+#   $ perf stat -e task-clock,cycles,instructions,idq.mite_uops,idq.dsb_uops \
+#       split ...
+# See https://www.intel.com/content/www/us/en/content-details/841076/intel-mitigations-for-jump-conditional-code-erratum.html
+# and https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/best-practices/mitigation-strategies-jcc-microcode.html
+#
+# The "lucky" code layout might be possible without Jcc-workaround CFLAGS,
+# that makes A/B benchmarking a bit less trivial.
+#
+# Some compilers may produce -O2 code with performance regressions depending
+# on code layout & CPU running it.  That's workaround from coreutils side.
+# Number of hosts affected by Jcc-erratum is estimated as ~23% on March 2026
+# via Firefox Public Data Report on hardware: ~22% of machines with ~95% being
+# x86.  That might be enough to justify Jcc workaround being enabled by default
+# for few more years as the workaround performance penalty is mostly zero.
+AC_ARG_ENABLE([cdc-cflags],
+  [AS_HELP_STRING([--enable-cdc-cflags@<:@=FLAGS@:>@],
+     [compile split CDC code with extra cflags. Default: add Intel Jcc Erratum
+      workaround and loop alignment while compiling for x86_64.])],
+  [utils_cdc_cflags=$enableval],
+  [utils_cdc_cflags=yes]
+)
+case "$utils_cdc_cflags" in
+  yes|no)
+    CDC_CFLAGS=
+    ;;
+  *)
+    # if user passes FLAGS, validate it before usage
+    gl_COMPILER_OPTION_IF([$utils_cdc_cflags],
+      [CDC_CFLAGS="$utils_cdc_cflags"],
+      [AC_MSG_ERROR([compiler rejects $utils_cdc_cflags for cdc-cflags])])
+    ;;
+esac
+if test "$utils_cdc_cflags" = yes && test "$host_cpu" = x86_64; then
+  # x86_64 is the only affected & somewhat carefully benchmarked platform.
+  # Also, x86_64 is almost-never cross-compiled, so exfiltrating compiler
+  # version via AC_COMPUTE_INT is unnecessary.
+  AC_RUN_IFELSE(
+    [AC_LANG_PROGRAM([[
+#include <stdio.h>
+      ]], [[
+#if defined(__clang__)
+      printf("clang-%d.%d.%d\n", __clang_major__, __clang_minor__,
+             __clang_patchlevel__);
+#elif defined(__GNUC__)
+      printf("gcc-%d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#else
+      return 1;
+#endif
+      ]])],
+    [cc_version=`./conftest$EXEEXT`],
+    [cc_version="unknown"],
+    [cc_version="cross"])
+  case "$cc_version" in
+    gcc-11.*|gcc-12.*|gcc-13.*)
+      CDC_CFLAGS='-Wa,-mbranches-within-32B-boundaries -falign-loops=32' ;;
+    gcc-14.*|gcc-15.*)
+      # These versions do 32-byte alignment for CDC loops with bare -O2, but
+      # alignment makes BUZHash affected by Jcc-erratum.
+      CDC_CFLAGS='-Wa,-mbranches-within-32B-boundaries' ;;
+    clang-19.*|clang-20.*|clang-21.*|clang-22.*)
+      # Jcc-fix + align-loops degrades performance on Xeon Platinum 8592+, but
+      # GearHash performance on affected Intel chips still depends on Jcc-fix,
+      # and it's the GearHash that is "fast" CDC algorithm.
+      CDC_CFLAGS='-mbranches-within-32B-boundaries' ;;
+  esac
+  gl_COMPILER_OPTION_IF([$CDC_CFLAGS],
+    [true],
+    [AC_MSG_ERROR([compiler $cc_version rejects default cdc-cflags $CDC_CFLAGS])])
+fi
+AC_SUBST([CDC_CFLAGS])
+
 AC_FUNC_FORK
 
 optional_bin_progs=
