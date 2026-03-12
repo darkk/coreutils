@@ -1,0 +1,21 @@
+#!/bin/sh
+
+test -s gpuModel.json || \
+  wget -O gpuModel.json \
+  https://data.firefox.com/datasets/desktop/hardware/default/gpuModel/index.json
+
+# Long list of affected CPUs from the [Erratum] joined with the list
+# of corresponding GPUs in '.data.populations | keys' becomes a filter
+# that gives a rough estimate of machines affected by the Jcc bug.
+#
+# The set of desktop machines running Firefox is not the most precise
+# estimate of general population, but it's the best data source I know.
+#
+# [Erratum] https://www.intel.com/content/www/us/en/content-details/841076/\
+#     intel-mitigations-for-jump-conditional-code-erratum.html
+
+latest=$(jq -r '.data.populations[][].x' gpuModel.json | sort | tail -1)
+jq --arg latest "$latest" \
+ '.data.populations[ "Skylake (GT2)", "Kaby Lake (GT1.5)", "Kaby Lake (GT2)", '\
+'                    "Coffee Lake (GT2)" ][] | select(.x == $latest) | .y'     \
+  gpuModel.json | awk '{ a += $1 } END { print a }'
