@@ -467,6 +467,7 @@ all_tests =					\
   tests/split/b-chunk.sh			\
   tests/split/bytes-cdc.sh			\
   tests/split/bytes-cdc-offbyone.sh		\
+  tests/split/lines-cdc.sh			\
   tests/split/random-source.sh			\
   tests/split/fail.sh				\
   tests/split/lines.sh				\
