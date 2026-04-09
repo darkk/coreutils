@@ -1151,6 +1151,7 @@ bytes_cdc_split (enum Cdc_type const hash, intmax_t const avgsz,
     }
   if (n_read < 0)
     error (EXIT_FAILURE, errno, "%s", quotef (infile));
+  free ((void *)terminator);
 }
 
 /* Split into pieces of exactly N_LINES lines.
