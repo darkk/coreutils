@@ -72,6 +72,10 @@ extern unsigned char const *
 buz32_find (void *phash_, void const *ple_, unsigned char const *p,
             unsigned char const *const end, idx_t window)
 {
+  /* It's possible to optimize UNBUZ access on i386 placing it at (BUZ + 256).
+     That saves one register spill out of two in this loop with offseted LEA.
+     The second spill might be optimized away with _rawfind()-like code.
+     But optimizing file processing code for 32-bit x86 feels odd in 2026.  */
   uint32_t *const phash = phash_;
   uint32_t const *const ple = ple_;
   uint32_t const *const buz = cdc_table;
