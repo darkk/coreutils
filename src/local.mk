@@ -434,7 +434,8 @@ noinst_LIBRARIES += src/libsplit_cdc.a
 src_libsplit_cdc_a_SOURCES = src/split_cdc.c
 src_libsplit_cdc_a_CFLAGS = $(CDC_CFLAGS) $(AM_CFLAGS)
 if USE_JCCERR_CDC
-src_split_LDADD += src/libsplit_jccerr.a
+split_jccerr_ldadd = src/libsplit_jccerr.a
+src_split_LDADD += $(split_jccerr_ldadd)
 noinst_LIBRARIES += src/libsplit_jccerr.a
 src_libsplit_jccerr_a_SOURCES = src/split_cdc.c
 src_libsplit_jccerr_a_CFLAGS = -DJCCERR_CDC $(JCCERR_CFLAGS) \
